@@ -1,0 +1,51 @@
+body, html {border: 0px; margin: 0px; padding: 0px;  height:100%; position:relative; width:100%; overflow: hidden}
+
+.submissionPanel {width: 50%; position: fixed}
+,submissionsStatusBar {position: fixed; left: 0px; bottom: 0px; background: white; border-top: 1px solid gray; width: 100%}
+#sourceCode_container {width: 100%; height: 100%; overflow: auto}
+
+.headTile {width: 100%; height: 30px; background: url(graphics/appmenu.png)}
+
+#apptab	{width: 100%; top: 30px; left: 0px; position: fixed; z-index: 234567890}
+
+
+TD 																		{font-size: 9pt; font-family: Lucida Sans Unicode}
+#filaDeAlunos TD																{padding-left: 5px; padding-right: 5px}
+
+#sourceCodeTab																	{width: 100%; height: 100%}
+
+TEXTAREA																	{overflow: auto; font-size: 9pt !important; font-family: lucida console}
+.LTAContainer TR																{height: 15px !important}
+.LTAContainer INPUT																{background: transparent !important; border: 0px solid gray !important; font-size: 9pt !important; font-family: Lucida Console; height: 15px !important}
+
+TR.selected TD 																	{background: #FF8000; color: white}
+TR.selected verified TD 															{color: #009900; background: #CCFFCC !important}
+.verified 																	{color: #009900}
+
+
+
+.compileError																	{color: #008080}
+.naoEnviado 																	{color: #FF0000; text-align: center}
+.strike 																	{text-decoration: line-through; color: #808080}
+
+.failed																		{color: #FF0000; font-weight: bold}
+
+#barraStatus TABLE, #appbar TABLE, #modoVisualizacao TABLE, #compCnt TABLE, #autorCodigoFonte TABLE, #testFilterer TABLE			{height: 30px}
+#barraStatus TABLE TD, #appbar TABLE TD, #modoVisualizacao TABLE TD, #compCnt TABLE TD, #autorCodigoFonte TABLE TD, #testFilterer TABLE TD	{font-family: Lucida Sans Unicode; font-size: 12pt; color: gray}
+	
+.activeTab TD.left																{background: url(graphics/tab_left.png); width: 15px}
+.activeTab_u TD.left																{background: url(graphics/tab_left-u.png); width: 15px}
+		
+.activeTab TD.middle																{background: url(graphics/hovertab.png); color: #FF8000 !important}
+.activeTab_u TD.middle																{background: url(graphics/hovertab.png); color: #FF8000 !important}
+
+.activeTab TD.right																{background: url(graphics/tab_right.png); width: 15px}
+.activeTab_u TD.right																{background: url(graphics/tab_right-u.png); width: 15px}
+
+#editInfo																	{font-size: 9pt !important; width: 100%}
+#listaTestes TD																	{height: 25px}
+#listaTestes TD.testes_c															{font-size: 12pt; color: gray; padding-left: 20px; background: url(graphics/collapse.png) transparent scroll left center no-repeat}
+#listaTestes TD.testes_c:hover															{background-image: url(graphics/collapse_h.png)}
+#listaTestes TD.testes_e															{font-size: 12pt; color: #FF8000; padding-left: 20px; background: url(graphics/collapse_c.png) transparent scroll left center no-repeat}
+#listaTestes TD.subtestes															{padding-left: 20px}
+#filtrarPor {background: white; border: 1px solid gray}

@@ -1,0 +1,372 @@
+<!DOCType html>
+
+<html style="min-height:100%; height: auto !important; height: 100%">
+<head style="min-height:100%; height: auto !important; height: 100%">
+
+<script src="../O2J/jquery.min.js"></script>
+<script src="../O2J/fundamentals.o2j"></script>
+<script src="../O2J/files.o2j"></script>
+<script src="../O2J/guienhancements.o2j"></script>
+<script src="../O2J/tabs.o2j"></script>
+<script src="../O2J/databaseconnection.o2j"></script>
+<script src="../O2J/MSOfficeAutomation.o2j"></script>
+
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<!--<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />-->
+
+<link rel="stylesheet" type="Text/CSS" media="all" href="graphics/tkstyle.css">
+<link rel="stylesheet" type="Text/CSS" media="all" href="main.css">
+
+<hta:application
+	name = "autoprofc"
+	selection = "no"
+	windowState = "maximized"
+	innerborder = "no"
+	version = "1.0"
+	singleinstance = "yes"
+>
+
+<script language="VBScript">
+	Set WshShell = CreateObject("WScript.Shell")
+
+	Function SetCurrentDirectory(directory)
+		 WshShell.CurrentDirectory = directory
+	End Function
+
+	Function Exec(filePath)
+		Exec = WshShell.Run(filePath, 0)
+	End Function
+
+	Function ExecAndWait(filePath)
+		ExecAndWait = WshShell.Run(filePath, 0, true)
+	End Function
+</script>
+
+<script>
+	var appSettings = new connection(program.getPath() + "\\settings.dtx")
+	var dynamicHeightParameters = []
+
+	var diretorioSubmissoes
+	var diretorioTestes
+	var colunaExercicio
+	var isNumericOutput
+	var correcaoParcial
+	var CCompiler = new file(appSettings.getAttribute("C Compiler"))
+	var CPPCompiler = new file(appSettings.getAttribute("C++ Compiler"))
+	var APCNotFound = "Arquivo não enviado"
+	var barraDeStatus
+	var sourceCodeView
+	var codigoFonteAutor
+
+	var listaDeAlunos
+	var listaDeTestes
+
+	var trabalhosSubmetidos = []
+	var alunosMem = []
+
+	var arqEntrada
+	var arqSaida
+	var arqSaidaAluno
+
+
+	planilhaResultado = new MSExcelSheet(appSettings.getAttribute("SpreadSheet"))
+	planilhaResultado.open()
+
+	var definirTestes	
+
+	String.prototype.formataNome = function(noBaseName){
+		thisString = this
+		if (!noBaseName) thisString = thisString.getSubstring("_")
+		thisString = thisString.fullReplace("+®","e")
+		thisString = thisString.fullReplace("+º","c")
+		thisString = thisString.fullReplace("+ú","a")
+		thisString = thisString.fullReplace("+¡","i")
+		thisString = thisString.fullReplace("+í","a")
+		thisString = thisString.fullReplace("+ó","a")
+		thisString = thisString.fullReplace("+ç","C")
+
+
+		if (thisString.indexOf('.') != -1 && thisString.indexOf('.') != thisString.lastIndexOf('.')){
+			thisString = thisString.replace('.','')
+		}
+		
+		return thisString
+	}
+
+
+	String.prototype.removerReferenciaArquivo = function(){
+		thisString = this.split(lineBreak)
+
+		for (qwer = 0; qwer < thisString.length; qwer++){
+			thisString[qwer] = thisString[qwer].substring(thisString[qwer].indexOf(': ')+1,thisString[qwer].length)
+		}
+
+		return thisString.join(lineBreak)
+	}
+
+	String.prototype.numericOutput = function(){
+		newString = ""
+		
+		for (vbn = 0; vbn < this.length; vbn++){
+			if (!isNaN(this.charAt(vbn)) || this.charAt(vbn) == " " || this.charAt(vbn) == "." || this.charAt(vbn) == unescape("%0D") || this.charAt(vbn) == unescape("%0A")|| this.charAt(vbn) == unescape("%09")){
+				newString += this.charAt(vbn)
+			}
+		}
+
+		if (newString.indexOf('. ') != -1) newString = newString.fullReplace('. ','')
+
+		return newString
+	}
+
+	String.prototype.toNameCase = function(){
+		theseWords = this.split(' ')
+		
+		for (a = 0; a < theseWords.length; a++){
+			theseWords[a] = theseWords[a].toLowerCase().trim()
+
+			if (!theseWords[a].compare(["de","da","e"])){
+				theseWords[a] = theseWords[a].charAt(0).toUpperCase() + theseWords[a].substring(1, theseWords[a].length)
+			}
+		}
+
+		return theseWords.join(' ')
+	}
+
+	String.prototype.removeAnySpaces = function(){
+		thisStr = this.fullReplace("\x09","").fullReplace("\x0D","").fullReplace("\x0A","").fullReplace("\x20","").fullReplace("\x00","").fullReplace("\xFF","")
+		return thisStr
+	}
+
+	Array.prototype.joinExcept = function(idx){
+		thisArr = [].copy(this)
+		thisArr.annihilate(idx)
+
+		return thisArr.join(', ')
+	}
+</script>
+
+<script src="prototype/arquivoTeste.js"></script>
+<script src="prototype/codigoFonte.js"></script>
+<script src="prototype/codigoFonteAtual.js"></script>
+<script src="prototype/programa.js"></script>
+
+
+<script>
+
+	function startCorrectingComment(objSource, cmt){
+		
+		if (!document.getElementById('editInfo')){
+			objSource.innerHTML = "<textarea id=editInfo onblur=\"correctComment()\" onclick=\"event.cancelBubble = true\" onkeydown=\"if (event.keyCode == 13){event.keyCode = 0; event.returnValue = false; correctComment(); return false}\">"+cmt.decode()+"</textarea>"
+			document.getElementById('editInfo').focus()
+		}
+	}
+
+	function correctComment(){
+		if (document.getElementById('editInfo').value.trim() == ""){
+			event.cancelBubble = true
+			return false
+		}
+
+		obtemLinhaAluno = document.getElementById('editInfo')
+		obtemIndiceLinha = -1
+
+		while (obtemLinhaAluno.tagName != "TR" && obtemLinhaAluno.tagName != "BODY"){
+			obtemLinhaAluno = obtemLinhaAluno.parentElement
+		}
+
+		if (obtemLinhaAluno.tagName != "BODY"){
+			obtemAluno = obtemLinhaAluno.getElementsByTagName("TD")[0].innerText.toUpperCase()
+			obtemIndiceLinha = obtemLinhaAluno.rowIndex
+
+			obtemCodigoFonte = alunosMem[obtemIndiceLinha]
+			obtemCodigoFonte.comentar(document.getElementById('editInfo').value)
+
+			document.getElementById('editInfo').outerText = document.getElementById('editInfo').value
+			obtemLinhaAluno.className += " verified"
+		}
+	}
+</script>
+
+<title>Deutriex AutoProf-C</title>
+
+</head>
+<body onresize="programa.calculateDynamicHeights()" onunload="planilhaResultado.close(); programa.excluirArquivosTemporarios()" onkeydown="programa.interfaceSubmissoes.navegarLista()" onload="programa.inicia()">
+
+
+<table celspacing=0 cellpadding=0 style="left: 0px; top: 0px; width: 100%; height: 30px; position: fixed; z-index: 123456790">
+<tr><td width=40>Perfil</td><td width=*><input style="width: 100%" id=arquivoPerfil></td><td width=100><button onclick="programa.interfaceSubmissoes.carregarSubmissoes()">Carregar</button></td></tr>
+</table>
+
+<div id=progInterface style="position: fixed; left: 0px; top: 30px; display: none">
+
+<table cellspacing=0 cellpadding=0 width=100% height=100%>
+<tr height=30>
+<td style="border-bottom: 1px solid #CCCCCC" id=appbar></td>
+</tr>
+<tr>
+<td>
+
+<div id=apptab>
+<input type=hidden value="Submissões">
+
+<div id=submissionsPanel class="submissionPanel" style="bottom: 0px; left: 0%">
+
+<table cellspacing=0 cellpadding=0 class="headTile">
+<tr>
+<td width=120 align=center id=searchCrit_text>Nome do aluno</td>
+<td width=20 id=searchCrit><img src="graphics/popupMenu.png"></td>
+<td><textarea style="width: 100%" onkeyup="programa.interfaceSubmissoes.filtroAlunos.filtraSubmissoes()" onkeydown="programa.interfaceSubmissoes.filtroAlunos.filtraSubmissoes()" id=nomeAlunoBusca></textarea></td>
+<td width=80 id=flagPlagiarism style="display: none"><button onclick="programa.interfaceSubmissoes.filtroAlunos.denunciarPlagio()">Plágio</button></td>
+</tr>
+</table>
+
+<div style="width: 100%; height: 100%; overflow-y: auto; position: relative">
+<table width=100% id=filaDeAlunos cellspacing=0 cellpadding=0>
+</table>
+</div>
+
+</div>
+
+<div id=sourceCodePanel class="submissionPanel" style="bottom: 0px; left: 50%">
+
+<table cellspacing=0 cellpadding=0 class="headTile">
+<tr>
+<td id=autorCodigoFonte></td>
+<td id=statusCodigoFonte align=right>Pronto</td>
+<td width=120 align=center id=interromperCodigoFonte style="display: none"><button onclick="new codigoFonteAtual().interromper()">Interromper</button></td>
+<td width=60 align=center id=pararCodigoFonte style="display: none"><button onclick="new codigoFonteAtual().parar()">Parar</button></td>
+</tr>
+</table>
+
+
+<div id=sourceCodeTab>
+<input id=nomeAlunoAtual type=hidden value="Digite o nome do aluno">
+<div id="sourceCode_container" class="LTAContainer">
+<table id=sourceCode cellspacing=0 cellpadding=0></table>
+</div>
+</div>
+
+<div id=sourceCodeTab>
+<input type=hidden value="Mensagem do compilador">
+<input type=hidden value=0>
+<table id=compilerMessage cellspacing=0 cellpadding=0 width=100%> 
+</table>
+</div>
+
+
+
+<table cellspacing=0 cellpadding=0 class="headTile" style="bottom: 0px; left: 0px; position: relative">
+<tr>
+<td>
+
+<table width=100% cellspacing=0 cellpadding=0>
+<tr>
+<td width=50>Etiqueta</td><td><input id=etiquetaAtribuida style="width: 100% !important"></td>
+</tr>
+</table>
+
+</td>
+<td width=180>
+<button onclick="new codigoFonteAtual().compilar()" id=corrigeCodigoFonte>Corrigir</button>
+<button onclick="new codigoFonteAtual().reportar()" id=reportaCodigoFonte>Reportar</button>
+</td>
+</tr>
+</table>
+
+</div>
+
+<div style="position: fixed; bottom: 0px; bottom: 0px; width: 100%; height: 30px; border-top: 1px solid gray; background: white; z-index: 123456789">
+<table cellspacing=0 cellpadding=0 width=100%>
+<tr>
+<td id="barraStatus">Nenhum arquivo carregado</td>
+<td id="modoVisualizacao" align=right valign=top></td>
+</tr>
+</table>
+</div>
+
+</div>
+
+
+<div id=apptab>
+<input type=hidden value="Arquivos E/S">
+
+<div style="width: 10%; height: 550px; overflow-y: auto; position: fixed; left: 0px; top: 60px" id=testListPanel>
+<table id=listaTestes width=100%>
+</table>
+</div>
+
+<div style="width: 90%; height: 550px; position: fixed; left: 10%; top: 60px" id=IOfilesViewPanel>
+
+<div style="width: 30%; height: 550px; overflow-x: auto; display: inline; position: fixed; left: 10%; top: 60px" id=inFileCnt>
+<textarea style="height: 550px; width: 100%" readonly></textarea>
+</div>
+
+<div style="width: 30%; height: 550px; overflow-x: auto; display: inline; position: fixed; left: 40%; top: 60px" id=outFileCntRef>
+<textarea style="height: 550px; width: 100%" readonly></textarea>
+</div>
+
+<div style="width: 30%; height: 550px; overflow-x: auto; display: inline; position: fixed; left: 70%; top: 60px" id=outFileCntStd>
+<textarea style="height: 550px; width: 100%" readonly></textarea>
+</div>
+
+</div>
+
+
+<div class="submissionsStatusBar" style="bottom: 0px; left: 0%; width: 100%; height: 30px; position: fixed; border-top: 1px solid gray">
+<table cellspacing=0 cellpadding=0 width=100% height=100%>
+<tr>
+<td id=testFilterer></td>
+<td id=compCnt align=right></td>
+</tr>
+</table>
+</div>
+
+
+</div>
+
+</td>
+</tr>
+</table>
+
+</div>
+
+<table id=filtrarPor style="display: none; position: fixed; left: 0px; top: 0px; z-index: 123456789">
+<tr><td>Nome do aluno</td></tr>
+<tr><td>Comentário</td></tr>
+<tr><td>Conteúdo</td></tr>
+</table>
+
+<script>
+	var mainInterface = new tabset(document.getElementsByName('apptab'), document.getElementById('appbar'))
+	mainInterface.setInstancePointer(mainInterface)
+
+	var initTestFilterer = new tabset(["Todos", "Saídas com erro"], document.getElementById('testFilterer'), "activeTab_u")
+	initTestFilterer.setInstancePointer(initTestFilterer)
+
+	var viewMode = new tabset(["Padrão", "Listas de arquivos", "Código fonte"], document.getElementById('modoVisualizacao'), "activeTab_u")
+	viewMode.setInstancePointer(viewMode)
+	viewMode.attachCalls("programa.interfaceSubmissoes.setSubmissionsView(tabIdx)")
+
+	var compMode = new tabset(["Entrada", "Saída (professor)", "Saída (aluno)", "Saída (comparação)", "Entrada/Saída (comparação)"], document.getElementById('compCnt'), "activeTab_u")
+	compMode.setInstancePointer(compMode)
+	compMode.attachCalls("programa.interfaceArqES.showHideInOutfiles(tabIdx)")
+
+	programa.interfaceArqES.defConfiguracoesArqES()
+	programa.interfaceArqES.showHideInOutfiles(0)
+
+	listaDeAlunos = new graphicList('filaDeAlunos')
+	listaDeAlunos.linhasVisiveis = [].interpolate(0,94,94,"a")
+
+	listaDeTestes = new graphicList('listaTestes')
+	listaDeAlunos.setActiveLineClassName('selected')
+	listaDeTestes.setActiveLineClassName('selected')
+
+	sourceCodeView = new linedTextArea(document.getElementById('sourceCode'), "selected")
+	sourceCodeView.setInstancePointer(sourceCodeView)
+
+	createPopUpMenu = new popupMenu(document.getElementById('filtrarPor'), document.getElementById('searchCrit'), document.getElementById('searchCrit_text'), "selected")
+	createPopUpMenu.setInstancePointer(createPopUpMenu)
+</script>
+
+</body>
+</html>
